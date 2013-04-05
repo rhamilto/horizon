@@ -4,7 +4,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from openstack_dashboard import exceptions
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 # Set SSL proxy settings:
@@ -116,7 +116,7 @@ OPENSTACK_KEYSTONE_BACKEND = {
 }
 
 OPENSTACK_HYPERVISOR_FEATURES = {
-    'can_set_mount_point': True,
+    'can_set_mount_point': False,
 
     # NOTE: as of Grizzly this is not yet supported in Nova so enabling this
     # setting will not do anything useful
