@@ -1,5 +1,7 @@
 [gerrit]
-host=review.openstack.org
+host=code.engineering.redhat.com
 port=29418
-project=openstack/horizon.git
-defaultbranch=stable/juno
+project=horizon.git
+defaultbranch=rhos-6.0-patches
+defaultremote=rhos
+defaultrebase=0
