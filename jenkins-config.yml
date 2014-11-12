@@ -1,0 +1,141 @@
+# This file is used by the jenkins job
+# read: 'How it works' section at the bottom
+
+### config template ###
+# test_env:       # top-level namespace used by khaleesi
+#   env_name:     # test config
+#     Distro-Version:   # test configuration for the distro-version
+#     | setup:          # how the testbed VM needs to be setup
+#     | ' repos:        # add the following repos
+#     | '   - filename: repo-name.repo
+#     | '     contents: |
+#     | '       [section]
+#     | '       contents
+#     | '       of
+#     | '       Repo
+#
+#     | ' install:      # install the following rpm and
+#     | '   - rpm-abc   # ensure latest is installed
+#     | '   - rpm-foo
+#     | '   - rpm-bar
+#
+#     | ' remove:       # delete the following rpms
+#     | '   - rpm-foo
+#     | '   - rpm-bar
+#     | '   - rpm-baz
+#     | ' pip:         # use virtualenv --system-site-packages to
+#     | '   overrides: # override system packages
+#     | '   - pip-pkg-foo
+#     | '   - pip-pkg-foo
+#
+#     | run: >      # how tests should be run
+#     |  run_command; another_command;
+#     |  ./run_tests.sh -N -P    # all but last statement should terminated by ;
+#
+#     | archive:  # what files to archive
+#     |   - nosetest.xml
+#
+#  NOTE: there must be a env_name: called virt: which will be used to run tests
+#  in virtualenv when running tests in env_name fails
+
+### test dependencies ###
+horizon_rpm_deps: [
+  python-django, git, httpd, mod_wsgi, python-anyjson, python-ceilometerclient,
+  python-cinderclient, python-coverage, python-d2to1, python-dateutil,
+  python-django-appconf, python-django-compressor, python-django-nose,
+  python-django-openstack-auth, python-django-pyscss,
+  python-django-notification, python-eventlet, python-glanceclient,
+  python-heatclient, python-iso8601, python-keystoneclient, python-kombu,
+  python-lesscpy, python-lockfile, python-mox, python-netaddr,
+  python-neutronclient, python-nose, python-nose-exclude, python-novaclient,
+  python-oslo-config, python-oslo-sphinx, python-pbr, python-saharaclient,
+  python-selenium, python-setuptools, python-six, python-sphinx,
+  python-swiftclient, python-troveclient, python2-devel, pytz
+]
+
+### additional repos ###
+horizon_f20_repos:
+  - filename: rdo.repo
+    contents: |
+      [rdo-icehouse]
+      name= Packages for RDO icehouse
+      baseurl= http://repos.fedorapeople.org/repos/openstack/openstack-icehouse/fedora-20
+      gpgcheck= 0
+
+horizon_rhel7_repos:
+  - filename: rdo.repo
+    contents: |
+      [rdo-icehouse]
+      name= Packages for RDO icehouse
+      baseurl= http://repos.fedorapeople.org/repos/openstack/openstack-icehouse/epel-7
+      gpgcheck= 0
+
+### how to run tests ###
+horizon_rpm_run_config:
+  run: >
+    export NOSE_WITH_HTML_OUTPUT=1;
+    ./run_tests.sh -N -P --with-xunit  >../logs/testrun.log 2>&1;
+    cp horizon/nosetests.xml ../logs/horizon-testresult.xml;
+    cp openstack_dashboard/nosetests.xml ../logs/openstack_dashboard-testresult.xml;
+  archive:
+    - ../logs/testrun.log
+    - ../logs/horizon-testresult.xml
+    - ../logs/openstack_dashboard-testresult.xml
+
+### virtualenv config ###
+horizon_virt_config:
+  setup:
+    install: [
+      gcc, git, libffi-devel, libvirt-devel, libxml2-devel, libxslt-devel,
+      mariadb-devel, openssl-devel, postgresql-devel, python-devel,
+      python-pip, python-virtualenv,
+    ]
+
+  run: >
+    ./run_tests.sh -V -P  >../logs/venv-testrun.log 2>&1
+  archive:
+    - ../logs/venv-testrun.log
+
+### actual test_config: starts here: used by khaleesi ###
+### NOTE: test_config.virt must be defined ###
+test_config:
+  rpm:
+    Fedora-20:
+      setup:
+        repos:   "{{horizon_f20_repos}}"
+        install: "{{horizon_rpm_deps}}"
+      run: "{{horizon_rpm_run_config.run}}"
+      archive: "{{horizon_rpm_run_config.archive}}"
+
+    RedHat-7.0:
+      setup:
+        repos: "{{horizon_rhel7_repos}}"
+        install: "{{horizon_rpm_deps}}"
+      run: "{{horizon_rpm_run_config.run}}"
+      archive: "{{horizon_rpm_run_config.archive}}"
+
+  virt:
+    Fedora-20: "{{horizon_virt_config}}"
+    RedHat-7.0: "{{horizon_virt_config}}"
+
+# How this works!
+# ==============
+# This file is used by khaleesi[1] playbook unit_test.yml[2].
+#  - The jenkins job checks out khaleesi, settings and this repo and
+#    runs unit_test.yml playbook.
+#  - The playbook reads this config file and
+#      - adds repos in test_dependencies.rpm.repos
+#      - installs all packages in  test_dependencies.rpm.install
+#      - removes all packages in test_dependencies.rpm.remove
+#  - it then runs the test by executing the command specfied in
+#    test_env.rpm.run NOTE all commands should terminate with a ';'
+#  - if tests fail, the same is run in venv with pip packages.
+#
+# PIP overrides
+# -------------
+# When there is no corresponding rpm for a pip package, you can override that
+# particular package using the pip.override section. When you do so, make sure
+# the packaging team is notified about the new requirement.
+#
+# [1] https://github.com/redhat-openstack/khaleesi
+# [2] https://github.com/redhat-openstack/khaleesi/blob/master/playbooks/unit_test.yml
