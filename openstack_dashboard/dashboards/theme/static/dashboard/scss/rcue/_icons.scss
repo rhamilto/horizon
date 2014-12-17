@@ -14,10 +14,6 @@
   font-style: normal;
 }
 
-[class*="-exclamation"] {
-  color: #fff;
-}
-
 [class^="#{$icon-prefix}-"], [class*=" #{$icon-prefix}-"] {
   display: inline-block;
   font-family: '#{$icon-font-name-pf}';
@@ -41,6 +37,9 @@
       position: relative;
       z-index: 2;
     }
+  }
+  [class*="-exclamation"] {
+    color: #fff;
   }
 }
 
